@@ -375,7 +375,7 @@ class FittedSignalCollection(SignalCollection):
 
     def __getitem__(self, index):
         if isinstance(index, slice):
-            return FittedCollection(signals=self._signals[index])
+            return FittedSignalCollection(signals=self._signals[index])
         return self._signals[index]
 
     def append(self, signal):
@@ -390,7 +390,7 @@ class FittedSignalCollection(SignalCollection):
         offset = np.zeros(shape_offset)
         for ind, s in enumerate(self._signals):
             magnitude[ind, :] = s.magnitude
-            offset[ind] =  s.offset
+            offset[ind] = s.offset
         return magnitude, offset
 
     def is_complex(self):
@@ -414,7 +414,9 @@ class FittedSignalCollection(SignalCollection):
             average_offset += s.offset
         average_magnitudes /= self.__len__()
         average_offset /= self.__len__()
-        return FittedSignal(self.tau, average_magnitudes, self._signals[0].kernel, self._signals[0].Ts, offset=average_offset)
+        return FittedSignal(self.tau, average_magnitudes,
+                            self._signals[0].kernel,
+                            self._signals[0].Ts, offset=average_offset)
 
     def average_byN(self, n):
         """Average each n signals together to form a new collection"""
@@ -427,7 +429,10 @@ class FittedSignalCollection(SignalCollection):
                 average_offset += s.offset
             average_magnitudes /= self.__len__()
             average_offset /= self.__len__()
-            new_signals.append(FittedSignal(self.tau, average_magnitudes, self._signals[0].kernel, self._signals[0].Ts, offset=average_offset))
+            new_signals.append(
+                    FittedSignal(self.tau, average_magnitudes,
+                                 self._signals[0].kernel, self._signals[0].Ts,
+                                 offset=average_offset))
         return new_signals
 
     def normalize(self):

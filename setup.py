@@ -14,7 +14,7 @@ setup(
     description='1D Proton NMR relaxometry analysis',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='',
+    url='https://github.com/specmicp/relaxNMR',
     author='Fabien Georget',
     author_email='Fabien.georget@epfl.ch',
     license='BSD',
