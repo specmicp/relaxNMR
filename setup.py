@@ -31,7 +31,7 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
     keywords='NMR analysis relaxometry ',  # Optional
-    #packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    packages=find_packages(exclude=['contrib', 'docs', 'test']),
     python_requires='>=3.4, <4',
     install_requires=[
             'numpy',
