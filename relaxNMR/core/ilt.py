@@ -139,6 +139,12 @@ class ILTFitter1D:
         if self.has_offset:
             K[:nb_tau, nb_T] = np.ones((nb_tau, ))
 
+        # Accounting for the non-uniform spacing of T2
+        # laplace transform : exp(-R*t)*dR -> exp(-t/T)*dT/T**2 with R = 1/T
+        dTs = np.gradient(self.Ts)
+        for j in range(nb_T):
+            K[:, j] *= dTs[j] / self.Ts[j]**2
+
         self.K = K
 
     def invert(self, signal):
@@ -158,4 +164,4 @@ class ILTFitter1D:
         else:
             offset = 0.0
 
-        return FittedSignal(self.tau, As, self.K, self.Ts, offset=offset), rnorm
+        return FittedSignal(self.tau, As, self.K[:self.nb_tau, :], self.Ts, offset=offset), rnorm
