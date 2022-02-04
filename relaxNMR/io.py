@@ -129,3 +129,23 @@ def read_folder(path, extension, fmt=None):
         signal = read_signal(file, fmt=fmt)
         collection.append(signal)
     return collection
+
+def read_mouse_signal(filepath, delimiter="\t"):
+    """Read a signal from a mouse file
+
+    :param filepath: the path to a mouse ".CPMG"/".CPMGACQP" file
+    :type filepath: str
+    """
+    ext = os.path.splitext(filepath)[1]
+    data = np.loadtxt(filepath, delimiter=delimiter)
+    depths = np.unique(data[:,0])
+    signals = {}
+    if  ext == ".cpmgacqp":
+        for d in depths:
+            subview = data[data[:,0]==d,:]
+            signals[d] = ComplexSignal(subview[:,2]*1e-3, subview[:,4], subview[:,5])
+    elif ext == ".cpmg":
+        for d in depths:
+            subview = data[data[:,0]==d,:]
+            signals[d] = MagnitudeSignal(subview[:,2]*1e-3, subview[:,4])
+    return signals
