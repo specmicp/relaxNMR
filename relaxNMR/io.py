@@ -46,10 +46,12 @@ class SignalFormat:
                  time_col=0,
                  time_factor=1.0,
                  real_col=None, imag_col=None,
-                 magn_col=None):
+                 magn_col=None,
+                 skiprows=0):
         self.delimiter = delimiter
         self.time_col = time_col
         self.time_factor = time_factor
+        self.skiprows = skiprows
 
         self._is_magnitude = (magn_col is not None)
 
@@ -88,7 +90,7 @@ def read_signal(filepath, fmt=None):
     if fmt is None:
         fmt = default_format
 
-    data = np.loadtxt(filepath, delimiter=fmt.delimiter)
+    data = np.loadtxt(filepath, delimiter=fmt.delimiter, skiprows=fmt.skiprows)
 
     tau = data[:, fmt.time_col]*fmt.time_factor
     if fmt.is_magnitude:
