@@ -54,6 +54,7 @@ class SignalFormat:
         self.time_col = time_col
         self.time_factor = time_factor
         self.skiprows = skiprows
+        self.autostrip = False
 
         self._is_magnitude = (magn_col is not None)
 
@@ -81,6 +82,11 @@ default_format = SignalFormat("\t",
                               real_col=2, imag_col=3
                               )
 
+MQC_txt_format = SignalFormat(" ",
+                              time_col=0, time_factor=1e-6,
+                              real_col=4, imag_col=8
+                              )
+
 
 def read_signal(filepath, fmt=None):
     """Read a signal from a file.
@@ -94,7 +100,10 @@ def read_signal(filepath, fmt=None):
     if fmt is None:
         fmt = default_format
 
-    data = np.loadtxt(filepath, delimiter=fmt.delimiter, skiprows=fmt.skiprows)
+    # data = np.loadtxt(filepath, delimiter=fmt.delimiter, skiprows=fmt.skiprows)
+    data = np.genfromtxt(filepath, delimiter=fmt.delimiter,
+                         skip_header=fmt.skiprows,
+                         autostrip=fmt.autostrip)
 
     tau = data[:, fmt.time_col]*fmt.time_factor
     if fmt.is_magnitude:
