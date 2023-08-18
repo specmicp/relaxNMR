@@ -36,11 +36,13 @@ from glob import glob
 
 import numpy as np
 from relaxNMR.core import MagnitudeSignal, ComplexSignal,\
-    MagnitudeSignalCollection, ComplexSignalCollection
+    MagnitudeSignalCollection, ComplexSignalCollection, \
+    ProfileSignalCollection
 
 
 class SignalFormat:
     """Format of the CSV file"""
+
     def __init__(self,
                  delimiter,
                  time_col=0,
@@ -63,13 +65,15 @@ class SignalFormat:
         else:
             self.magn_col = None
             if real_col is None:
-                raise ValueError("Either real_col or magn_col must be provided")
+                raise ValueError(
+                    "Either real_col or magn_col must be provided")
             self.real_col = real_col
             self.imag_col = imag_col
 
     @property
     def is_magnitude(self):
         return self._is_magnitude
+
 
 # The default format
 default_format = SignalFormat("\t",
@@ -132,6 +136,7 @@ def read_folder(path, extension, fmt=None):
         collection.append(signal)
     return collection
 
+
 def read_mouse_signal(filepath, delimiter="\t"):
     """Read a signal from a mouse file
 
@@ -140,14 +145,55 @@ def read_mouse_signal(filepath, delimiter="\t"):
     """
     ext = os.path.splitext(filepath)[1]
     data = np.loadtxt(filepath, delimiter=delimiter)
-    depths = np.unique(data[:,0])
+    depths = np.unique(data[:, 0])
     signals = {}
-    if  ext == ".cpmgacqp":
+    if ext == ".cpmgacqp":
         for d in depths:
-            subview = data[data[:,0]==d,:]
-            signals[d] = ComplexSignal(subview[:,2]*1e-3, subview[:,4], subview[:,5])
+            subview = data[data[:, 0] == d, :]
+            signals[d] = ComplexSignal(
+                subview[:, 2]*1e-3, subview[:, 4], subview[:, 5])
     elif ext == ".cpmg":
         for d in depths:
-            subview = data[data[:,0]==d,:]
-            signals[d] = MagnitudeSignal(subview[:,2]*1e-3, subview[:,4])
-    return signals
+            subview = data[data[:, 0] == d, :]
+            signals[d] = MagnitudeSignal(subview[:, 2]*1e-3, subview[:, 4])
+    return depths, signals
+
+
+def read_mouse_profile(filepath, delimiter="\t"):
+    ext = os.path.splitext(filepath)[1]
+    data = np.loadtxt(filepath, delimiter=delimiter)
+    depths = np.unique(data[:, 0])
+
+    if ext == ".dat":
+        # Mouse PM25 - decays in two files: -decays.dat, and -decaysimag.dat
+        base = os.path.splitext(filepath)[0]
+        real_files = base+"-decays.dat"
+        imag_files = base+"-decaysimag.dat"
+        depth_file = base+".dat"
+
+        real_data = np.loadtxt(real_files, delimiter=delimiter)
+        imag_data = np.loadtxt(imag_files, delimiter=delimiter)
+
+        depths = np.loadtxt(depth_file, delimiter=delimiter)[:, 0]
+
+        signals = []
+        for ind in range(len(depths)):
+            signals.append(ComplexSignal(
+                real_data[:, 0]/1000, real_data[:, ind+1], imag_data[:, ind+1]))
+    elif ext in [".cpmg", ".cpmgacqp"]:
+        data = np.loadtxt(filepath, delimiter=delimiter)
+        depths = np.unique(data[:, 0])
+        signals = []
+
+        if ext == ".cpmgacqp":
+            for d in depths:
+                subview = data[data[:, 0] == d, :]
+                signals.append(ComplexSignal(
+                    subview[:, 2]/1000, subview[:, 4], subview[:, 5]))
+        elif ext == ".cpmg":
+            for d in depths:
+                subview = data[data[:, 0] == d, :]
+                signals.append(MagnitudeSignal(
+                    subview[:, 2]/1000, subview[:, 4]))
+
+    return ProfileSignalCollection(depths, signals)

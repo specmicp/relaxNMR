@@ -37,7 +37,8 @@ import numpy as np
 
 __all__ = ["ComplexSignal", "MagnitudeSignal", "FittedSignal",
            "SignalCollection",
-           "ComplexSignalCollection", "MagnitudeSignalCollection", "FittedSignalCollection"]
+           "ComplexSignalCollection", "MagnitudeSignalCollection",
+           "FittedSignalCollection", "ProfileSignalCollection"]
 
 
 class Signal(ABC):
@@ -63,9 +64,10 @@ class Signal(ABC):
 
 class ComplexSignal(Signal):
     """A complex signal"""
+
     def __init__(self, tau, real, imag):
-        assert(real.shape[0] == tau.shape[0])
-        assert(imag.shape[0] == tau.shape[0])
+        assert (real.shape[0] == tau.shape[0])
+        assert (imag.shape[0] == tau.shape[0])
 
         super().__init__(tau)
         self._real = real
@@ -78,6 +80,12 @@ class ComplexSignal(Signal):
     @property
     def imag(self):
         return self._imag
+
+    def is_complex(self):
+        return True
+
+    def is_magnitude(self):
+        return False
 
     def _signal_impl(self):
         return self._real
@@ -92,7 +100,7 @@ class ComplexSignal(Signal):
 
         theta = np.array(thetas).mean()
 
-        real1 =  np.cos(theta)*self.real + np.sin(theta)*self.imag
+        real1 = np.cos(theta)*self.real + np.sin(theta)*self.imag
         imag1 = -np.sin(theta)*self.real + np.cos(theta)*self.imag
 
         self._real = real1
@@ -110,11 +118,18 @@ class ComplexSignal(Signal):
 
 class MagnitudeSignal(Signal):
     """A signal in magnitude mode"""
+
     def __init__(self, tau, signal):
-        assert(signal.shape[0] == tau.shape[0])
+        assert (signal.shape[0] == tau.shape[0])
 
         super().__init__(tau)
         self._signal = signal
+
+    def is_complex(self):
+        return False
+
+    def is_magnitude(self):
+        return True
 
     def _signal_impl(self):
         return self._signal
@@ -126,6 +141,7 @@ class MagnitudeSignal(Signal):
 
 class FittedSignal(Signal):
     """A fitted signal"""
+
     def __init__(self, tau, magnitudes, kernel, Ts, offset=0.0):
         super().__init__(tau)
         self._kernel = kernel
@@ -165,8 +181,10 @@ class FittedSignal(Signal):
         """Normalize the magnitudes."""
         self._As = self._As / np.sum(self._As)
 
+
 class SignalCollection:
     """A container of signals. Assume all signals have the same size"""
+
     def __init__(self, signals=None):
         """
         :param signals: Signals to initialize the container
@@ -198,7 +216,7 @@ class SignalCollection:
 
     def append(self, signal):
         """Add a signal to the collection"""
-        assert(isinstance(signal, Signal))
+        assert (isinstance(signal, Signal))
         self._signals.append(signal)
 
     def extend(self, signals):
@@ -245,8 +263,23 @@ class SignalCollection:
         return NotImplementedError("Use a subclass to precise the nature of the scans")
 
 
+def average_complex_signals(signals_array):
+    size = signals_array[0].size
+    alen = len(signals_array)
+
+    average_real = np.zeros((size,))
+    average_imag = np.zeros((size,))
+    for s in signals_array:
+        average_real += s.real
+        average_imag += s.imag
+    average_real /= alen
+    average_imag /= alen
+    return ComplexSignal(signals_array[0].tau, average_real, average_imag)
+
+
 class ComplexSignalCollection(SignalCollection):
     """ A container of complex signals"""
+
     def __init__(self, signals=None):
         super().__init__(signals)
 
@@ -256,7 +289,7 @@ class ComplexSignalCollection(SignalCollection):
         return self._signals[index]
 
     def append(self, signal):
-        assert(isinstance(signal, ComplexSignal))
+        assert (isinstance(signal, ComplexSignal))
         self._signals.append(signal)
 
     def asarray(self):
@@ -282,27 +315,14 @@ class ComplexSignalCollection(SignalCollection):
 
     def average(self):
         """Returns an average of the collection as a single signal."""
-        average_real = np.zeros((self.size,))
-        average_imag = np.zeros((self.size,))
-        for s in self._signals:
-            average_real += s.real
-            average_imag += s.imag
-        average_real /= self.__len__()
-        average_imag /= self.__len__()
-        return ComplexSignal(self._signals[0].tau, average_real, average_imag)
+        return average_complex_signals(self._signals)
 
     def average_byN(self, n):
         """Average each n signals together to form a new collection"""
         new_signals = ComplexSignalCollection()
         for i in range(int(np.floor(len(self._signals)/n))):
-            average_real = np.zeros_like(self.tau)
-            average_imag = np.zeros_like(self.tau)
-            for s in self._signals[n*i:n*(i+1)]:
-                average_real += s.real
-                average_imag += s.imag
-            average_real /= n
-            average_imag /= n
-            new_signals.append(ComplexSignal(self.tau, average_real, average_imag))
+            new_signals.append(average_complex_signals(
+                self._signals[n*i:n*(i+1)]))
         return new_signals
 
     def phase(self, start_echo, nb_echo):
@@ -316,17 +336,28 @@ class ComplexSignalCollection(SignalCollection):
             s.remove_first_echo()
 
 
+def average_magnitude_signal(signals_array):
+    size = signals_array[0].size
+    alen = len(signals_array)
+
+    average_signal = np.zeros((size,))
+    for s in signals_array:
+        average_signal += s.signal
+    average_signal /= alen
+    return MagnitudeSignal(signals_array[0].tau, average_signal)
+
+
 class MagnitudeSignalCollection(SignalCollection):
     def __init__(self, signals=None):
         super().__init__(signals)
 
     def __getitem__(self, index):
         if isinstance(index, slice):
-            return MagnitudeCollection(signals=self._signals[index])
+            return MagnitudeSignalCollection(signals=self._signals[index])
         return self._signals[index]
 
     def append(self, signal):
-        assert(isinstance(signal, MagnitudeSignal))
+        assert (isinstance(signal, MagnitudeSignal))
         self._signals.append(signal)
 
     def asarray(self):
@@ -350,21 +381,14 @@ class MagnitudeSignalCollection(SignalCollection):
 
     def average(self):
         """Returns an average of the collection as a single signal."""
-        average_signal = np.zeros_like(self.tau)
-        for s in self._signals:
-            average_signal += s.signal
-        average_signal /= self.__len__()
-        return MagnitudeSignal(self.tau, average_signal)
+        return average_magnitude_signal(self._signals)
 
     def average_byN(self, n):
         """Average each n signals together to form a new collection"""
         new_signals = MagnitudeSignalCollection()
         for i in range(int(np.floor(len(self._signals)/n))):
-            average_signal = np.zeros_like(self.tau)
-            for s in self._signals[n*i:n*(i+1)]:
-                average_signal += s.signal
-            average_signal /= n
-            new_signals.append(MagnitudeSignal(self.tau, average_signal))
+            new_signals.append(average_magnitude_signal(
+                self._signals[n*i:n*(i+1)]))
         return new_signals
 
 
@@ -379,7 +403,7 @@ class FittedSignalCollection(SignalCollection):
         return self._signals[index]
 
     def append(self, signal):
-        assert(isinstance(signal, FittedSignal))
+        assert (isinstance(signal, FittedSignal))
         self._signals.append(signal)
 
     def asarray(self):
@@ -430,12 +454,80 @@ class FittedSignalCollection(SignalCollection):
             average_magnitudes /= self.__len__()
             average_offset /= self.__len__()
             new_signals.append(
-                    FittedSignal(self.tau, average_magnitudes,
-                                 self._signals[0].kernel, self._signals[0].Ts,
-                                 offset=average_offset))
+                FittedSignal(self.tau, average_magnitudes,
+                             self._signals[0].kernel, self._signals[0].Ts,
+                             offset=average_offset))
         return new_signals
 
     def normalize(self):
         """Normalize the magnitudes."""
         for s in self._signals:
             s.normalize()
+
+
+class ProfileSignalCollection:
+    def __init__(self, depths, signals):
+        self._depths = depths
+        if not hasattr(signals, "__len__"):
+            raise ValueError("signals must be a list-like of signals")
+        self._signals = signals
+
+    def is_complex(self):
+        """Return true if the signal is complex"""
+        return self._signals[0].is_complex()
+
+    def is_magnitude(self):
+        """Return true if the signal is in magnitude mode"""
+        return self._signals[0].is_magnitude()
+
+    def is_fitted(self):
+        """Return true if this signal is a reconstructed signal."""
+        return self._signals[0].is_fitted()
+
+    def echos_correction(self, cor1, cor2):
+        for s in self._signals:
+            s.real[0] /= cor1
+            s.imag[1] /= cor2
+
+    def at(self, depth):
+        ind = np.where(self._depths >= depth)[0]
+        return self._signals[ind]
+
+    def depths(self):
+        return self._depths
+
+    def __getitem__(self, int_or_slice):
+        if isinstance(int_or_slice, int):
+            return self._signals[int_or_slice]
+        else:
+            return ProfileSignalCollection(
+                self._depths[int_or_slice],
+                self._signals[int_or_slice])
+
+    def items(self):
+        for i, d in enumerate(self._depths):
+            yield d, self._signals[i]
+
+    def _get_average_f(self):
+        if self.is_complex():
+            fn_average = average_complex_signals
+        elif self.is_magnitude():
+            fn_average = average_magnitude_signal
+        else:
+            raise RuntimeError("Unknow signal")
+        return fn_average
+
+    def average(self):
+        fn_average = self._get_average_f()
+        return fn_average(self._signals)
+
+    def average_depth(self, depth_start, depth_end):
+        inds = np.where(self._depths >= depth_start)[0][0]
+        inde = np.where(self._depths >= depth_end)[0]
+        if inde.size == 0:
+            inde = None
+        else:
+            inde = inde[0]
+
+        fn_average = self._get_average_f()
+        return fn_average(self._signals[inds:inde])

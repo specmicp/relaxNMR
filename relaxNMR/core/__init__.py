@@ -29,8 +29,10 @@
 
 from relaxNMR.core.signal import ComplexSignal, MagnitudeSignal,\
                                  FittedSignal, SignalCollection,\
-                                 ComplexSignalCollection, MagnitudeSignalCollection, FittedSignalCollection
+                                 ComplexSignalCollection, MagnitudeSignalCollection, FittedSignalCollection,\
+                                 ProfileSignalCollection
 
 __all__ = ["ComplexSignal", "MagnitudeSignal", "FittedSignal",
            "SignalCollection",
-           "ComplexSignalCollection", "MagnitudeSignalCollection", "FittedSignalCollection"]
+           "ComplexSignalCollection", "MagnitudeSignalCollection", "FittedSignalCollection",
+           "ProfileSignalCollection"]
