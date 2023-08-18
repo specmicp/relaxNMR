@@ -10,7 +10,7 @@ signals.remove_first_echo()
 average_signal = signals.average()
 
 Trange=(1e-5, 1) # the range of relaxation times
-alpha = 1e-2     # the penalization parameter
+alpha = 1e-4     # the penalization parameter
 
 # fit individual experiment
 fitted = ILT_fit_collection(signals, Trange, alpha)

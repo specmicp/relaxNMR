@@ -77,7 +77,7 @@ if __name__ == "__main__":
     mode2 = []
     mode3 = []
 
-    errors = [0.001, 0.005, 0.01, 0.05, 0.1]
+    errors = [0.001, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1]
     for ind, error in enumerate(errors):
         reale = add_error(real, error)
 
@@ -100,10 +100,10 @@ if __name__ == "__main__":
     ax.set_ylabel("Taus")
 
     fig, ax = plt.subplots()
-    ax.semilogx(errors, mode0, color="black")
-    ax.semilogx(errors, mode1, color="red")
-    ax.semilogx(errors, mode2, color="blue")
-    ax.semilogx(errors, mode3, color="green")
+    ax.semilogx(errors, mode0, "o-", color="black")
+    ax.semilogx(errors, mode1, "o-", color="red")
+    ax.semilogx(errors, mode2, "o-", color="blue")
+    ax.semilogx(errors, mode3, "o-", color="green")
 
     ax.set_xlabel("Error scale")
-    ax.set_ylabel("Mode fraction")
+    ax.set_ylabel("Pore class fraction")
