@@ -37,7 +37,7 @@ from glob import glob
 import numpy as np
 from relaxNMR.core import MagnitudeSignal, ComplexSignal,\
     MagnitudeSignalCollection, ComplexSignalCollection, \
-    ProfileSignalCollection
+    ProfileSignalCollection, QuadEchoCollection
 
 
 class SignalFormat:
@@ -169,6 +169,7 @@ def read_mouse_signal(filepath, delimiter="\t"):
 
 
 def read_mouse_profile(filepath, delimiter="\t"):
+    """Read signal from a depth profiles obtained from the NMR Mouse"""
     ext = os.path.splitext(filepath)[1]
     data = np.loadtxt(filepath, delimiter=delimiter)
     depths = np.unique(data[:, 0])
@@ -206,3 +207,57 @@ def read_mouse_profile(filepath, delimiter="\t"):
                     subview[:, 2]/1000, subview[:, 4]))
 
     return ProfileSignalCollection(depths, signals)
+
+
+def read_delay_mqc(filepath):
+    parameters = filepath.replace(".Dat.txt", ".Par.txt")
+    with open(parameters, "r") as ofile:
+        for line in ofile:
+            param, value = line.split()
+            if param == "D1":
+                return float(value)
+            else:
+                continue
+    return ValueError("Delay not found in parameter file: {0}.".format(parameters))
+
+
+def read_quadecho_folder(folder, fmt, extension, tau_f):
+    """
+
+    Parameters
+    ----------
+    folder : str
+        The folder to read
+    fmt: SignalFormat
+        The format used to read the signal
+    extension: str:
+        The extension of files containing individual signals
+    tau_f : str
+        The function to read the tau delay, takes the signal filename as input
+
+    Returns
+    -------
+    A QuadEchoCollection
+
+    """
+    if not extension.startswith("."):
+        extension = "." + extension
+    pattern = "*" + extension
+    all_files = glob(os.path.join(folder, pattern))
+    all_files.sort(key=os.path.getmtime)
+
+    collection = QuadEchoCollection()
+    for file in all_files:
+        delay = tau_f(file)
+        signal = read_signal(file, fmt)
+        collection[delay] = signal
+
+    return collection
+
+
+def read_quadecho_mqc(folder):
+    """A simple wrapper around read_quadecho_folder for the MQC equipment."""
+    return read_quadecho_folder(folder,
+                                fmt=MQC_txt_format,
+                                extension=".Dat.txt",
+                                tau_f=read_delay_mqc)

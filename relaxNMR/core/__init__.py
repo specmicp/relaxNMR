@@ -28,11 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from relaxNMR.core.signal import ComplexSignal, MagnitudeSignal,\
-                                 FittedSignal, SignalCollection,\
-                                 ComplexSignalCollection, MagnitudeSignalCollection, FittedSignalCollection,\
-                                 ProfileSignalCollection
+    FittedSignal, SignalCollection,\
+    ComplexSignalCollection, MagnitudeSignalCollection, FittedSignalCollection,\
+    ProfileSignalCollection, QuadEchoCollection
 
 __all__ = ["ComplexSignal", "MagnitudeSignal", "FittedSignal",
            "SignalCollection",
-           "ComplexSignalCollection", "MagnitudeSignalCollection", "FittedSignalCollection",
-           "ProfileSignalCollection"]
+           "ComplexSignalCollection", "MagnitudeSignalCollection",
+           "FittedSignalCollection",
+           "ProfileSignalCollection",
+           "QuadEchoCollection"]

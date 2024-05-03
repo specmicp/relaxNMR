@@ -38,7 +38,8 @@ import numpy as np
 __all__ = ["ComplexSignal", "MagnitudeSignal", "FittedSignal",
            "SignalCollection",
            "ComplexSignalCollection", "MagnitudeSignalCollection",
-           "FittedSignalCollection", "ProfileSignalCollection"]
+           "FittedSignalCollection", "ProfileSignalCollection",
+           "QuadEchoCollection"]
 
 
 class Signal(ABC):
@@ -60,6 +61,10 @@ class Signal(ABC):
     @property
     def signal(self):
         return self._signal_impl()
+
+    @abstractmethod
+    def substract_empty_tube(self, signal):
+        pass
 
 
 class ComplexSignal(Signal):
@@ -115,6 +120,15 @@ class ComplexSignal(Signal):
         self._real = self._real[1:]
         self._imag = self._imag[1:]
 
+    def substract_empty_tube(self, tube_signal):
+        self._real -= tube_signal.real
+        self._imag -= tube_signal.imag
+
+    def normalize(self):
+        norm = self._real[0]
+        self._real /= norm
+        self._imag /= norm
+
 
 class MagnitudeSignal(Signal):
     """A signal in magnitude mode"""
@@ -137,6 +151,9 @@ class MagnitudeSignal(Signal):
     def remove_first_echo(self):
         self._tau = self._tau[1:]
         self._signal = self._signal[1:]
+
+    def substract_empty_tube(self, tube_signal):
+        self._signal -= tube_signal.signal
 
 
 class FittedSignal(Signal):
@@ -180,6 +197,9 @@ class FittedSignal(Signal):
     def normalize(self):
         """Normalize the magnitudes."""
         self._As = self._As / np.sum(self._As)
+
+    def substract_empty_tube(self, tube_signal):
+        raise RuntimeError("Invalid method for fitted signal.")
 
 
 class SignalCollection:
@@ -531,3 +551,41 @@ class ProfileSignalCollection:
 
         fn_average = self._get_average_f()
         return fn_average(self._signals[inds:inde])
+
+
+class QuadEchoCollection:
+    def __init__(self, seq_profiles=None):
+        self._signals = {}
+
+        if seq_profiles is not None:
+            for (tau, signal) in seq_profiles:
+                self.__setitem__(tau, signal)
+
+    def __setitem__(self, key, value):
+        if key in self._signals.keys():
+            self._signals[key].append(value)
+        else:
+            self._signals[key] = [value, ]
+
+    def __getitem__(self, key):
+        if key not in self._signals.keys():
+            raise ValueError(
+                "{0} is not a valid delay time or this QuadEchoCollection.".format(key))
+
+        signals = self._signals[key]
+        if len(self._signals) == 1:
+            return signals
+
+        if isinstance(signals[0], MagnitudeSignal):
+            return MagnitudeSignalCollection(signals)
+        elif isinstance(signals[0], ComplexSignal):
+            return ComplexSignalCollection(signals)
+        else:
+            raise ValueError(
+                "Unknow signal type encountered in QuadEchoCollection")
+
+    def items(self):
+        return self._signals.items()
+
+    def delays(self):
+        return self._signals.keys()
